@@ -24,7 +24,7 @@
 
         const data = new google.visualization.DataTable();
 
-        // Eixo X categórico
+        // X categórico
         data.addColumn('string', 'Project');
 
         // Séries
@@ -38,7 +38,7 @@
           p: { html: true }
         });
 
-        // Link oculto para clique
+        // Link oculto
         data.addColumn('string', 'source_link');
 
         for (let i = 1; i < rows.length; i++) {
@@ -49,7 +49,7 @@
           if (r.length < 6) continue;
 
           const name = r[0];
-          const mi = parseFloat(r[1]); // 0–1
+          const mi = parseFloat(r[1]);   // 0–1
           const ppmi = parseFloat(r[2]); // 0–1
           const resources = r[3];
           const oreType = r[4];
@@ -73,37 +73,40 @@
 
         const options = {
           title: 'Scoping Study',
-          height: 500,
-          pointSize: 8,
+          height: 520,
           tooltip: { isHtml: true },
           legend: { position: 'right' },
+
           hAxis: {
             title: 'Projects',
             slantedText: true,
             slantedTextAngle: 45
           },
+
           vAxis: {
             title: 'Ratio (%)',
             minValue: 0,
             maxValue: 1,
             format: 'percent'
           },
+
+          seriesType: 'scatter',
           series: {
-            0: { color: '#3366cc' }, // azul
-            1: { color: '#dc3912' }  // vermelho
+            0: { color: '#3366cc', pointSize: 8 },
+            1: { color: '#dc3912', pointSize: 8 }
           }
         };
 
-        const chart = new google.visualization.ScatterChart(
+        const chart = new google.visualization.ComboChart(
           document.getElementById('chart')
         );
 
-        // 👉 Clique funcional no ponto
+        // Clique funcional
         google.visualization.events.addListener(chart, 'select', function () {
-          const selection = chart.getSelection();
-          if (!selection.length) return;
+          const sel = chart.getSelection();
+          if (!sel.length) return;
 
-          const row = selection[0].row;
+          const row = sel[0].row;
           const link = data.getValue(row, 4);
 
           if (link) {
@@ -120,6 +123,5 @@
     <div id="chart"></div>
   </body>
 </html>
-
 
 
