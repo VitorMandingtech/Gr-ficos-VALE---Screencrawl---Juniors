@@ -20,38 +20,33 @@
 
       const data = new google.visualization.DataTable();
 
-      // 🔹 Eixo X (numérico)
-      data.addColumn('number', 'P+P / M+I');
+      // X e Y
+      data.addColumn('number', 'P+P / M+I');          // X
+      data.addColumn('number', 'Measured + Indicated'); // Y
 
-      // 🔵 Série azul (Measured + Indicated no eixo Y)
-      data.addColumn('number', 'Measured + Indicated');
-
-      // 🔴 Série vermelha (P+P / M+I no eixo X)
-      data.addColumn('number', 'P+P / M+I');
-
-      // Tooltip informativo
+      // Tooltip
       data.addColumn({ type: 'string', role: 'tooltip', p: { html: true } });
 
-      // Link para clique
+      // Link (para clique)
       data.addColumn({ type: 'string', role: 'annotationText' });
 
       rows.forEach(r => {
         const c = r.split(',').map(v => v.replace(/"/g, '').trim());
 
         const name = c[0];
-        const mi = parseFloat(c[1]);   // 0–1
-        const pp = parseFloat(c[2]);   // 0–1
+        const pp = parseFloat(c[2]);   // X (0–1)
+        const mi = parseFloat(c[1]);   // Y (0–1)
         const resources = c[3];
         const ore = c[4];
         const link = c[5];
 
-        if (isNaN(mi)) return;
+        if (isNaN(pp) || isNaN(mi)) return;
 
         const tooltip = `
           <div style="padding:8px; max-width:230px">
             <b>${name}</b><br>
             Measured + Indicated: ${mi}<br>
-            P+P / M+I: ${isNaN(pp) ? 'N/A' : pp}<br>
+            P+P / M+I: ${pp}<br>
             Resources: ${resources} Mt<br>
             Ore type: ${ore}<br>
             <span style="color:#1a73e8; font-size:11px">
@@ -60,13 +55,7 @@
           </div>
         `;
 
-        data.addRow([
-          pp,                     // X
-          mi,                     // Y azul
-          isNaN(pp) ? null : pp,  // série vermelha
-          tooltip,
-          link
-        ]);
+        data.addRow([pp, mi, tooltip, link]);
       });
 
       const options = {
@@ -87,22 +76,19 @@
           maxValue: 1
         },
 
-        series: {
-          0: { color: '#1a73e8' }, // azul
-          1: { color: '#d93025' }  // vermelho
-        }
+        colors: ['#1a73e8']
       };
 
       const chart = new google.visualization.ScatterChart(
         document.getElementById('chart')
       );
 
-      // Clique funcional (independente do tooltip)
+      // Clique funcional
       google.visualization.events.addListener(chart, 'select', () => {
         const sel = chart.getSelection();
         if (!sel.length) return;
 
-        const link = data.getValue(sel[0].row, 4);
+        const link = data.getValue(sel[0].row, 3);
         if (link) window.open(link, '_blank');
       });
 
@@ -115,5 +101,4 @@
   <div id="chart"></div>
 </body>
 </html>
-
 
