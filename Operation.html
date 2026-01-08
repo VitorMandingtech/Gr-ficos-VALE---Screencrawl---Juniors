@@ -17,51 +17,43 @@
         const res = await fetch(csvUrl);
         const csv = await res.text();
 
-        const rows = csv
-          .trim()
-          .split('\n')
-          .filter(r => r.trim().length > 0);
+        const rows = csv.trim().split('\n').filter(r => r.trim());
 
         const data = new google.visualization.DataTable();
 
-        // 👉 colunas principais do gráfico
         data.addColumn('string', 'Name_Chart');
-        data.addColumn('number', 'Measured + Indicated');
-        data.addColumn('number', 'Proved + Probable / Measured + Indicated');
-
-        // 👉 coluna de tooltip HTML
+        data.addColumn('number', 'Measured + Indicated (%)');
+        data.addColumn('number', 'Proved + Probable / Measured + Indicated (%)');
         data.addColumn({ type: 'string', role: 'tooltip', p: { html: true } });
 
-        // 👉 coluna com link (não visível no gráfico)
-        data.addColumn('string', 'Source');
+        const links = [];
 
         for (let i = 1; i < rows.length; i++) {
           const r = rows[i].split(',').map(c => c.replace(/"/g, '').trim());
           if (r.length < 6) continue;
 
           const name = r[0];
-          const x = parseFloat(r[1]); // M+I (0–1 ou % conforme planilha)
-          const y = parseFloat(r[2]); // P+P/M+I (0–1)
+          const mi = parseFloat(r[1]);
+          const ratio = parseFloat(r[2]);
+          const resources = r[3];
+          const oreType = r[4];
+          const link = r[5];
 
-          const resources = r[3]; // Resources (Mt)
-          const oreType = r[4];   // Ore Type
-          const source = r[5];    // Link
-
-          if (isNaN(x) || isNaN(y)) continue;
+          if (isNaN(mi) || isNaN(ratio)) continue;
 
           const tooltip = `
-            <div style="padding:8px; font-size:12px;">
-              <b>${name}</b><br>
-              Measured + Indicated: ${x}<br>
-              P+P / M+I: ${y}<br>
-              <br>
+            <div style="padding:8px; font-size:13px">
+              <strong>${name}</strong><br><br>
+              <b>Measured + Indicated:</b> ${mi}<br>
+              <b>P+P / M+I:</b> ${ratio}<br>
               <b>Resources (Mt):</b> ${resources}<br>
               <b>Ore Type:</b> ${oreType}<br>
-              <b>Source:</b> <a href="${source}" target="_blank">Open link</a>
+              <span style="color:#0066cc">Click to open source</span>
             </div>
           `;
 
-          data.addRow([name, x, y, tooltip, source]);
+          data.addRow([name, mi, ratio, tooltip]);
+          links.push(link);
         }
 
         const options = {
@@ -72,10 +64,12 @@
             bold: true
           },
           hAxis: {
-            title: 'Measured + Indicated'
+            title: 'Measured + Indicated (%)',
+            minValue: 0,
+            maxValue: 1
           },
           vAxis: {
-            title: 'Proved + Probable / Measured + Indicated',
+            title: 'Proved + Probable / Measured + Indicated (%)',
             minValue: 0,
             maxValue: 1
           },
@@ -88,14 +82,14 @@
           document.getElementById('chart')
         );
 
-        // 👉 clique na bolinha abre o link
-        google.visualization.events.addListener(chart, 'select', () => {
-          const selection = chart.getSelection();
-          if (!selection.length) return;
+        google.visualization.events.addListener(chart, 'select', function () {
+          const sel = chart.getSelection();
+          if (!sel.length) return;
 
-          const row = selection[0].row;
-          const link = data.getValue(row, 4);
-          if (link) window.open(link, '_blank');
+          const row = sel[0].row;
+          if (links[row]) {
+            window.open(links[row], '_blank');
+          }
         });
 
         chart.draw(data, options);
@@ -107,4 +101,3 @@
     <div id="chart"></div>
   </body>
 </html>
-
