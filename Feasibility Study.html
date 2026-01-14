@@ -11,56 +11,50 @@
       font-family: Arial, sans-serif;
       background: #f5f5f5;
       margin: 0;
-      padding: 30px;
+      padding: 20px;
     }
 
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    /* ===== SUBMENU ===== */
+    /* ===== MENU INTERNO ===== */
     .submenu {
       text-align: center;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
     }
 
     .submenu button {
       padding: 10px 18px;
-      margin: 5px;
-      border: none;
-      border-radius: 4px;
-      background: #eaeaea;
+      margin: 0 6px;
+      font-size: 14px;
       font-weight: bold;
+      border-radius: 4px;
+      border: none;
       cursor: pointer;
+      background: #e0e0e0;
     }
 
     .submenu button:hover {
-      background: #d0d0d0;
+      background: #cfcfcf;
     }
 
     /* ===== SEÇÕES ===== */
     .section {
       display: none;
-      background: #ffffff;
-      padding: 15px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
 
-    /* ===== FUNDO (SCATTER + BUBBLE) ===== */
-    .chart-bg {
+    /* ===== CONTAINER DOS GRÁFICOS ===== */
+    .chart-container {
       position: relative;
       width: 100%;
       height: 520px;
       overflow: hidden;
+      background: transparent;
     }
 
-    .chart-bg::before {
+    /* ===== FUNDO ===== */
+    .chart-container::before {
       content: "";
       position: absolute;
       inset: -30%;
-      background-image: url('fundo.jpg'); /* 👈 RAIZ */
+      background-image: url('fundo.jpg'); /* raiz do repositório */
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
@@ -69,7 +63,7 @@
       z-index: 0;
     }
 
-    .chart-bg > * {
+    .chart-container > * {
       position: relative;
       z-index: 1;
     }
@@ -95,20 +89,32 @@
     google.charts.load('current', { packages: ['corechart'] });
     google.charts.setOnLoadCallback(init);
 
+    let scatterDrawn = false;
+    let bubbleDrawn = false;
+
     function init() {
-      drawScatter();
-      drawBubble();
       showSection('scatterSection');
     }
 
     function showSection(id) {
-      document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
-      document.getElementById(id).style.display = 'block';
+      document.querySelectorAll('.section')
+        .forEach(s => s.style.display = 'none');
+
+      const section = document.getElementById(id);
+      section.style.display = 'block';
+
+      if (id === 'scatterSection' && !scatterDrawn) {
+        drawScatter();
+        scatterDrawn = true;
+      }
+
+      if (id === 'bubbleSection' && !bubbleDrawn) {
+        drawBubble();
+        bubbleDrawn = true;
+      }
     }
 
-    /* =====================================================
-       =================== SCATTER (INALTERADO) =============
-       ===================================================== */
+    /* ================= SCATTER (INALTERADO) ================= */
     async function drawScatter() {
       const csvUrl =
         'https://docs.google.com/spreadsheets/d/e/2PACX-1vSHkysTN6roFag5cFJv97rmXIsO9vKLKaAXmJxbeAD0v4klws329T8nwBI1ftUFKvrukkvLYM9vPysK/pub?gid=1894723608&single=true&output=csv';
@@ -133,24 +139,40 @@
         const name = r[0];
         const mi = parseFloat(r[1]);
         const ratio = parseFloat(r[2]);
+        const resources = r[3];
+        const oreType = r[4];
+        const link = r[5];
+
         if (isNaN(mi) || isNaN(ratio)) continue;
 
-        data.addRow([name, mi, ratio, `
+        const tooltip = `
           <div style="padding:8px; font-size:13px">
             <strong>${name}</strong><br><br>
             <b>Measured + Indicated:</b> ${mi}<br>
             <b>P+P / M+I:</b> ${ratio}<br>
-            <b>Resources (Mt):</b> ${r[3]}<br>
-            <b>Ore Type:</b> ${r[4]}<br>
+            <b>Resources (Mt):</b> ${resources}<br>
+            <b>Ore Type:</b> ${oreType}<br>
             <span style="color:#0066cc">Click to open source</span>
           </div>
-        `]);
+        `;
 
-        links.push(r[5]);
+        data.addRow([name, mi, ratio, tooltip]);
+        links.push(link);
       }
 
+      const options = {
+        title: 'Feasibility Study',
+        hAxis: { title: 'Measured + Indicated (%)', minValue: 0, maxValue: 1 },
+        vAxis: { title: 'P+P / M+I (%)', minValue: 0, maxValue: 1 },
+        height: 520,
+        pointSize: 10,
+        tooltip: { isHtml: true },
+        backgroundColor: 'transparent',
+        chartArea: { backgroundColor: 'transparent' }
+      };
+
       const chart = new google.visualization.ScatterChart(
-        document.getElementById('chart_scatter')
+        document.getElementById('scatterChart')
       );
 
       google.visualization.events.addListener(chart, 'select', () => {
@@ -160,32 +182,20 @@
         }
       });
 
-      chart.draw(data, {
-        title: 'Feasibility Study',
-        titlePosition: 'center',
-        titleTextStyle: { fontSize: 18, bold: true },
-        hAxis: { title: 'Measured + Indicated (%)', minValue: 0, maxValue: 1 },
-        vAxis: { title: 'Proved + Probable / Measured + Indicated (%)', minValue: 0, maxValue: 1 },
-        height: 520,
-        pointSize: 10,
-        tooltip: { isHtml: true },
-        backgroundColor: 'transparent',
-        chartArea: { backgroundColor: 'transparent' }
-      });
+      chart.draw(data, options);
     }
 
-    /* =====================================================
-       =================== BUBBLE (INALTERADO) ==============
-       ===================================================== */
+    /* ================= BUBBLE (ORIGINAL PRESERVADO) ================= */
     async function drawBubble() {
       const csvUrl =
         'https://docs.google.com/spreadsheets/d/e/2PACX-1vSHkysTN6roFag5cFJv97rmXIsO9vKLKaAXmJxbeAD0v4klws329T8nwBI1ftUFKvrukkvLYM9vPysK/pub?gid=1894723608&single=true&output=csv';
 
       const res = await fetch(csvUrl);
       const csv = await res.text();
-      const rows = csv.trim().split('\n').filter(r => r.trim());
 
+      const rows = csv.trim().split('\n').filter(r => r.trim());
       const data = new google.visualization.DataTable();
+
       data.addColumn('string', 'ID');
       data.addColumn('number', 'Measured + Indicated');
       data.addColumn('number', 'P+P / M+I');
@@ -199,18 +209,34 @@
         const r = rows[i].split(',').map(c => c.replace(/"/g, '').trim());
         if (r.length < 6) continue;
 
+        const name = r[0];
         const mi = parseFloat(r[1]);
         const ratio = parseFloat(r[2]);
         const resources = parseFloat(
           r[3].replace(/\./g, '').replace(',', '.').replace(/[^\d.]/g, '')
         );
+        const oreType = r[4];
+        const link = r[5];
 
         if (isNaN(mi) || isNaN(ratio) || isNaN(resources)) continue;
 
-        data.addRow(['', mi, ratio, resources, resources, r[0], r[4], r[5]]);
+        data.addRow(['', mi, ratio, resources, resources, name, oreType, link]);
       }
 
-      const chartDiv = document.getElementById('chart_bubble');
+      const options = {
+        title: 'Feasibility Study',
+        hAxis: { title: 'Measured + Indicated (%)', minValue: 0, maxValue: 1 },
+        vAxis: { title: 'P+P / M+I (%)', minValue: 0, maxValue: 1 },
+        colorAxis: { colors: ['#9ecae1', '#08306b'] },
+        sizeAxis: { minSize: 8, maxSize: 45 },
+        bubble: { textStyle: { fontSize: 0 } },
+        tooltip: { trigger: 'none' },
+        backgroundColor: 'transparent',
+        chartArea: { backgroundColor: 'transparent' },
+        height: 520
+      };
+
+      const chartDiv = document.getElementById('bubbleChart');
       const chart = new google.visualization.BubbleChart(chartDiv);
       const tooltip = document.getElementById('customTooltip');
 
@@ -241,29 +267,18 @@
 
       google.visualization.events.addListener(chart, 'select', () => {
         const sel = chart.getSelection();
-        if (sel.length) {
-          window.open(data.getValue(sel[0].row, 7), '_blank');
-        }
+        if (!sel.length) return;
+
+        const link = data.getValue(sel[0].row, 7);
+        if (link) window.open(link, '_blank');
       });
 
-      chart.draw(data, {
-        title: 'Feasibility Study',
-        hAxis: { title: 'Measured + Indicated (%)', minValue: 0, maxValue: 1 },
-        vAxis: { title: 'P+P / M+I (%)', minValue: 0, maxValue: 1 },
-        colorAxis: { colors: ['#9ecae1', '#08306b'] },
-        sizeAxis: { minSize: 8, maxSize: 45 },
-        bubble: { textStyle: { fontSize: 0 } },
-        tooltip: { trigger: 'none' },
-        backgroundColor: 'transparent',
-        chartArea: { backgroundColor: 'transparent' },
-        height: 520
-      });
+      chart.draw(data, options);
     }
   </script>
 </head>
 
 <body>
-  <h1>Feasibility Study</h1>
 
   <div class="submenu">
     <button onclick="showSection('scatterSection')">Scatter Chart</button>
@@ -271,13 +286,18 @@
   </div>
 
   <div id="scatterSection" class="section">
-    <div id="chart_scatter" class="chart-bg"></div>
+    <div class="chart-container">
+      <div id="scatterChart"></div>
+    </div>
   </div>
 
   <div id="bubbleSection" class="section">
-    <div id="chart_bubble" class="chart-bg"></div>
-    <div id="customTooltip"></div>
+    <div class="chart-container">
+      <div id="bubbleChart"></div>
+    </div>
   </div>
+
+  <div id="customTooltip"></div>
+
 </body>
-</html>
 
